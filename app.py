@@ -26,20 +26,16 @@ mimetypes.add_type("application/font-woff2", ".woff2")
 from flask import Flask, session
 from flask_wtf.csrf import CSRFProtect  # Import CSRF protection
 
-from blueprints.admin import admin_bp  # Import the admin blueprint
 from blueprints.analyzer import analyzer_bp  # Import the analyzer blueprint
 from blueprints.apikey import api_key_bp
-from blueprints.auth import auth_bp
 from blueprints.brlogin import brlogin_bp
 from blueprints.broker_credentials import (
     broker_credentials_bp,  # Import the broker credentials blueprint
 )
-from blueprints.chartink import chartink_bp  # Import the chartink blueprint
 from blueprints.chart_test import chart_test_bp  # Standalone chart test page (dev/testing only)
 from blueprints.strategy_portfolio import strategy_portfolio_bp  # Strategy Builder portfolio
 from blueprints.core import core_bp
 from blueprints.dashboard import dashboard_bp
-from blueprints.flow import flow_bp  # Import the flow blueprint
 from blueprints.gc_json import gc_json_bp
 from blueprints.gex import gex_bp  # Import the GEX blueprint
 from blueprints.ivsmile import ivsmile_bp  # Import the IV Smile blueprint
@@ -64,7 +60,6 @@ from blueprints.master_contract_status import (
 )
 from blueprints.orders import orders_bp
 from blueprints.platforms import platforms_bp
-from blueprints.playground import playground_bp  # Import the API playground blueprint
 from blueprints.pnltracker import pnltracker_bp  # Import the pnl tracker blueprint
 from blueprints.python_strategy import python_strategy_bp, initialize_with_app_context as init_python_strategy  # Import the python strategy blueprint
 from blueprints.react_app import (  # Import React frontend blueprint
@@ -72,18 +67,8 @@ from blueprints.react_app import (  # Import React frontend blueprint
     react_bp,
     serve_react_app,
 )
-from blueprints.sandbox import sandbox_bp  # Import the sandbox blueprint
-from blueprints.search import search_bp
-from blueprints.security import security_bp  # Import the security blueprint
 from blueprints.settings import settings_bp  # Import the settings blueprint
 from blueprints.strategy import strategy_bp  # Import the strategy blueprint
-from blueprints.system_permissions import (
-    system_permissions_bp,  # Import the system permissions blueprint
-)
-from blueprints.telegram import telegram_bp  # Import the telegram blueprint
-from blueprints.traffic import traffic_bp  # Import the traffic blueprint
-from blueprints.whatsapp import whatsapp_bp  # Import the WhatsApp blueprint
-from blueprints.tv_json import tv_json_bp
 from blueprints.websocket_example import websocket_bp  # Import the websocket example blueprint
 from cors import cors  # Import the CORS instance
 from csp import apply_csp_middleware  # Import the CSP middleware
@@ -91,27 +76,17 @@ from database.action_center_db import init_db as ensure_action_center_tables_exi
 from database.analyzer_db import init_db as ensure_analyzer_tables_exists
 from database.apilog_db import init_db as ensure_api_log_tables_exists
 from database.auth_db import init_db as ensure_auth_tables_exists
-from database.chartink_db import init_db as ensure_chartink_tables_exists
-from database.flow_db import init_db as ensure_flow_tables_exists
 from database.historify_db import init_database as ensure_historify_tables_exists
 from database.latency_db import init_latency_db as ensure_latency_tables_exists
 from database.leverage_db import init_db as ensure_leverage_tables_exists
-from database.sandbox_db import init_db as ensure_sandbox_tables_exists
 from database.scalping_db import init_db as ensure_scalping_tables_exists
 from database.settings_db import init_db as ensure_settings_tables_exists
 from database.strategy_db import init_db as ensure_strategy_tables_exists
 from database.symbol import init_db as ensure_master_contract_tables_exists
-from database.telegram_db import get_bot_config
-from database.traffic_db import init_logs_db as ensure_traffic_logs_exists
-from database.user_db import init_db as ensure_user_tables_exists
-from database.whatsapp_db import (
-    get_bot_config as get_whatsapp_bot_config,  # noqa: F401  (triggers module-level init_db)
-)
 from extensions import socketio  # Import SocketIO
 from limiter import limiter  # Import the Limiter instance
 from restx_api import api, api_v1_bp
 from services.broker_keepalive_service import start_broker_keepalive
-from services.telegram_bot_service import telegram_bot_service
 from utils.latency_monitor import init_latency_monitoring  # Import latency monitoring
 from utils.health_monitor import init_health_monitoring  # Import health monitoring
 from utils.logging import (  # Import centralized logging
@@ -120,11 +95,9 @@ from utils.logging import (  # Import centralized logging
     log_startup_banner,
 )
 from utils.plugin_loader import load_broker_auth_functions, load_broker_capabilities
-from utils.security_middleware import init_security_middleware  # Import security middleware
 from utils.socketio_error_handler import (
     init_socketio_error_handling,  # Import Socket.IO error handler
 )
-from utils.traffic_logger import init_traffic_logging  # Import traffic logging
 from utils.version import get_version  # Import version management
 
 # Import WebSocket proxy server - using relative import to avoid @ symbol issues
@@ -250,28 +223,17 @@ def create_app():
     # Exempt API endpoints from CSRF protection (they use API key authentication)
     csrf.exempt(api_v1_bp)
 
-    # Initialize security middleware before traffic logging
-    init_security_middleware(app)
-
-    # Initialize traffic logging middleware after security
-    init_traffic_logging(app)
-
     # Register other blueprints
-    app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(orders_bp)
-    app.register_blueprint(search_bp)
     app.register_blueprint(api_key_bp)
     app.register_blueprint(log_bp)
-    app.register_blueprint(tv_json_bp)
     app.register_blueprint(gc_json_bp)
     app.register_blueprint(platforms_bp)
     app.register_blueprint(brlogin_bp)
     app.register_blueprint(core_bp)
     app.register_blueprint(analyzer_bp)
     app.register_blueprint(settings_bp)
-    app.register_blueprint(chartink_bp)
-    app.register_blueprint(traffic_bp)
     app.register_blueprint(latency_bp)
     app.register_blueprint(leverage_bp)  # Register Leverage blueprint
     app.register_blueprint(health_bp)  # Register Health monitoring blueprint
@@ -281,13 +243,7 @@ def create_app():
     app.register_blueprint(chart_test_bp)  # Register standalone chart test page (dev/testing only)
     app.register_blueprint(pnltracker_bp)  # Register PnL tracker blueprint
     app.register_blueprint(python_strategy_bp)  # Register Python strategy blueprint
-    app.register_blueprint(telegram_bp)  # Register Telegram blueprint
-    app.register_blueprint(whatsapp_bp)  # Register WhatsApp blueprint
-    app.register_blueprint(security_bp)  # Register Security blueprint
-    app.register_blueprint(sandbox_bp)  # Register Sandbox blueprint
-    app.register_blueprint(playground_bp)  # Register API playground blueprint
     app.register_blueprint(logging_bp)  # Register Logging blueprint
-    app.register_blueprint(admin_bp)  # Register Admin blueprint
     app.register_blueprint(historify_bp)  # Register Historify blueprint
     app.register_blueprint(ivchart_bp)  # Register IV chart blueprint
     app.register_blueprint(scalping_bp)  # Register Scalping terminal blueprint
@@ -301,9 +257,7 @@ def create_app():
     app.register_blueprint(ivsmile_bp)  # Register IV Smile blueprint
     app.register_blueprint(oiprofile_bp)  # Register OI Profile blueprint
     app.register_blueprint(arbitrage_bp)  # Register Arbitrage blueprint
-    app.register_blueprint(flow_bp)  # Register Flow blueprint
     app.register_blueprint(broker_credentials_bp)  # Register Broker credentials blueprint
-    app.register_blueprint(system_permissions_bp)  # Register System permissions blueprint
     app.register_blueprint(strategy_portfolio_bp)  # Register Strategy Portfolio blueprint
 
     # Remote MCP (HTTP + OAuth) — opt-in via MCP_HTTP_ENABLED. Off by default.
@@ -394,10 +348,7 @@ def create_app():
     # Exempt webhook endpoints from CSRF protection after app initialization
     with app.app_context():
         # Exempt webhook endpoints from CSRF protection
-        csrf.exempt(app.view_functions["chartink_bp.webhook"])
         csrf.exempt(app.view_functions["strategy_bp.webhook"])
-        csrf.exempt(app.view_functions["flow.trigger_webhook"])
-        csrf.exempt(app.view_functions["flow.trigger_webhook_with_symbol"])
 
         # Exempt broker callback endpoints from CSRF protection (OAuth callbacks from external providers)
         csrf.exempt(app.view_functions["brlogin.broker_callback"])
@@ -408,9 +359,6 @@ def create_app():
         csrf.exempt(app.view_functions["brlogin.samco_save_secret"])
         csrf.exempt(app.view_functions["brlogin.samco_ip_status"])
         csrf.exempt(app.view_functions["brlogin.samco_update_ip"])
-
-        # Exempt logout endpoint from CSRF protection (safe - only destroys session)
-        csrf.exempt(app.view_functions["auth.logout"])
 
         # Exempt health check endpoints from CSRF (for AWS ELB, K8s probes)
         csrf.exempt(app.view_functions["health_bp.simple_health"])
@@ -521,29 +469,6 @@ def create_app():
 
     @app.errorhandler(404)
     def not_found_error(error):
-        from flask import request, session
-
-        from database.traffic_db import Error404Tracker
-        from utils.ip_helper import get_real_ip
-
-        client_ip = get_real_ip()
-        path = request.path
-
-        # Skip 404 tracking for authenticated users (prevents self-ban during
-        # login flows, broker OAuth callbacks, or normal navigation to
-        # React routes that don't have explicit Flask endpoints)
-        is_authenticated = session.get("logged_in", False)
-
-        # Skip tracking for common browser/crawler requests that are not attack probes
-        safe_prefixes = (
-            "/favicon", "/robots.txt", "/sitemap", "/manifest",
-            "/sw.js", "/.well-known", "/apple-touch-icon",
-            "/service-worker", "/workbox",
-        )
-
-        if not is_authenticated and not path.startswith(safe_prefixes):
-            Error404Tracker.track_404(client_ip, path)
-
         # Serve React app (React Router handles 404)
         return serve_react_app()
 
@@ -632,22 +557,17 @@ def setup_environment(app):
 
             db_init_functions = [
                 ("Auth DB", ensure_auth_tables_exists),
-                ("User DB", ensure_user_tables_exists),
                 ("Master Contract DB", ensure_master_contract_tables_exists),
                 ("API Log DB", ensure_api_log_tables_exists),
                 ("Analyzer DB", ensure_analyzer_tables_exists),
                 ("Settings DB", ensure_settings_tables_exists),
-                ("Chartink DB", ensure_chartink_tables_exists),
-                ("Traffic Logs DB", ensure_traffic_logs_exists),
                 ("Latency DB", ensure_latency_tables_exists),
                 ("Strategy DB", ensure_strategy_tables_exists),
-                ("Sandbox DB", ensure_sandbox_tables_exists),
                 ("Action Center DB", ensure_action_center_tables_exists),
                 ("Chart Prefs DB", ensure_chart_prefs_tables_exists),
                 ("Market Calendar DB", ensure_market_calendar_tables_exists),
                 ("Qty Freeze DB", ensure_qty_freeze_tables_exists),
                 ("Historify DB", ensure_historify_tables_exists),
-                ("Flow DB", ensure_flow_tables_exists),
                 ("Scalping DB", ensure_scalping_tables_exists),
                 ("Leverage DB", ensure_leverage_tables_exists),
                 ("Strategy Portfolio DB", ensure_strategy_portfolio_tables_exists),
@@ -677,14 +597,6 @@ def setup_environment(app):
                 logger.error(f"Failed to initialize Python strategy scheduler: {e}")
 
             try:
-                from services.flow_scheduler_service import init_flow_scheduler
-
-                init_flow_scheduler()
-                logger.debug("Flow scheduler initialized")
-            except Exception as e:
-                logger.error(f"Failed to initialize Flow scheduler: {e}")
-
-            try:
                 from services.historify_scheduler_service import init_historify_scheduler
 
                 init_historify_scheduler(socketio=socketio)
@@ -709,124 +621,6 @@ def setup_environment(app):
             # encrypted session blob is sitting in openalgo.db ready to use.
             # We do this on a background thread so a slow WhatsApp handshake
             # never delays the Flask boot.
-            def _autostart_whatsapp_bot():
-                try:
-                    from database.whatsapp_db import get_bot_config
-                    from services.whatsapp_bot_service import whatsapp_bot_service
-
-                    if not get_bot_config().get("is_paired"):
-                        logger.debug("WhatsApp: no paired session, skipping auto-start")
-                        return
-                    ok, msg = whatsapp_bot_service.start_bot()
-                    if ok:
-                        logger.info("WhatsApp bot auto-started from persisted session")
-                    else:
-                        logger.warning("WhatsApp bot auto-start failed: %s", msg)
-                except Exception:
-                    logger.exception("WhatsApp bot auto-start crashed")
-
-            import threading as _threading
-            _threading.Thread(
-                target=_autostart_whatsapp_bot,
-                daemon=True,
-                name="WhatsAppAutoStart",
-            ).start()
-
-            # Auto-start analyzer mode services (depends on DB being ready)
-            try:
-                from database.settings_db import get_analyze_mode
-
-                if get_analyze_mode():
-                    from sandbox.execution_thread import start_execution_engine
-                    from sandbox.squareoff_thread import start_squareoff_scheduler
-
-                    def start_engine():
-                        success, message = start_execution_engine()
-                        return ("execution_engine", success, message)
-
-                    def start_scheduler():
-                        success, message = start_squareoff_scheduler()
-                        return ("squareoff_scheduler", success, message)
-
-                    def run_catchup():
-                        from sandbox.position_manager import catchup_missed_settlements
-                        catchup_missed_settlements()
-                        return ("catchup_settlement", True, "Completed")
-
-                    with ThreadPoolExecutor(max_workers=3) as executor:
-                        futures = [
-                            executor.submit(start_engine),
-                            executor.submit(start_scheduler),
-                            executor.submit(run_catchup),
-                        ]
-                        for future in as_completed(futures):
-                            try:
-                                service_name, success, message = future.result()
-                                if service_name == "execution_engine":
-                                    if success:
-                                        logger.debug("Execution engine auto-started (Analyzer mode is ON)")
-                                    else:
-                                        logger.warning(f"Failed to auto-start execution engine: {message}")
-                                elif service_name == "squareoff_scheduler":
-                                    if success:
-                                        logger.debug("Square-off scheduler auto-started (Analyzer mode is ON)")
-                                    else:
-                                        logger.warning(f"Failed to auto-start square-off scheduler: {message}")
-                                elif service_name == "catchup_settlement":
-                                    logger.debug("Catch-up settlement check completed on startup")
-                            except Exception as e:
-                                logger.error(f"Error starting service: {e}")
-            except Exception as e:
-                logger.error(f"Error checking analyzer mode on startup: {e}")
-
-            # Auto-start Telegram bot if it was active (after DB tables exist)
-            try:
-                import sys
-
-                bot_config = get_bot_config()
-                if bot_config.get("is_active") and bot_config.get("bot_token"):
-                    logger.debug("Auto-starting Telegram bot (background)...")
-
-                    if "eventlet" in sys.modules:
-                        success, message = telegram_bot_service.initialize_bot_sync(
-                            token=bot_config["bot_token"]
-                        )
-                        if success:
-                            success, message = telegram_bot_service.start_bot()
-                            if success:
-                                logger.debug(f"Telegram bot auto-started successfully: {message}")
-                            else:
-                                logger.error(f"Failed to auto-start Telegram bot: {message}")
-                        else:
-                            logger.error(f"Failed to initialize Telegram bot: {message}")
-                    else:
-                        import asyncio
-
-                        try:
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                            try:
-                                success, message = loop.run_until_complete(
-                                    telegram_bot_service.initialize_bot(
-                                        token=bot_config["bot_token"]
-                                    )
-                                )
-                            finally:
-                                loop.close()
-
-                            if success:
-                                success, message = telegram_bot_service.start_bot()
-                                if success:
-                                    logger.debug(f"Telegram bot auto-started successfully: {message}")
-                                else:
-                                    logger.error(f"Failed to auto-start Telegram bot: {message}")
-                            else:
-                                logger.error(f"Failed to initialize Telegram bot: {message}")
-                        except Exception as e:
-                            logger.error(f"Error in Telegram bot startup: {e}")
-            except Exception as e:
-                logger.error(f"Error auto-starting Telegram bot: {e}")
-
     threading.Thread(target=_init_databases_and_schedulers, daemon=True).start()
 
 
@@ -868,7 +662,6 @@ def shutdown_database_sessions(exception=None):
     _sessions = [
         # --- Previously cleaned up ---
         ("database.auth_db", "db_session"),
-        ("database.traffic_db", "logs_session"),
         ("database.apilog_db", "db_session"),
         ("database.latency_db", "latency_session"),
         ("database.health_db", "health_session"),
@@ -878,16 +671,12 @@ def shutdown_database_sessions(exception=None):
         ("database.user_db", "db_session"),
         ("database.action_center_db", "db_session"),
         ("database.qty_freeze_db", "db_session"),
-        ("database.sandbox_db", "db_session"),
         ("database.analyzer_db", "db_session"),
         ("database.chart_prefs_db", "db_session"),
-        ("database.chartink_db", "db_session"),
-        ("database.flow_db", "db_session"),
         ("database.scalping_db", "db_session"),
         ("database.leverage_db", "db_session"),
         ("database.strategy_portfolio_db", "db_session"),
         ("database.market_calendar_db", "db_session"),
-        ("database.telegram_db", "db_session"),
         ("database.symbol", "db_session"),
     ]
 

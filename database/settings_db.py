@@ -81,32 +81,17 @@ def init_db():
 
 def get_analyze_mode():
     """Get current analyze mode setting (cached for 1 hour)"""
-    cache_key = "analyze_mode"
-
-    # Check cache first
-    if cache_key in _settings_cache:
-        return _settings_cache[cache_key]
-
-    # Cache miss - query database
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=False)  # Default to Live Mode
-        db_session.add(settings)
-        db_session.commit()
-
-    # Store in cache
-    _settings_cache[cache_key] = settings.analyze_mode
-    return settings.analyze_mode
+    return False
 
 
 def set_analyze_mode(mode: bool):
     """Set analyze mode setting"""
     settings = Settings.query.first()
     if not settings:
-        settings = Settings(analyze_mode=mode)
+        settings = Settings(analyze_mode=False)
         db_session.add(settings)
     else:
-        settings.analyze_mode = mode
+        settings.analyze_mode = False
     db_session.commit()
 
     # Invalidate cache after update
