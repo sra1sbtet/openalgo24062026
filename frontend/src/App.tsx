@@ -110,8 +110,6 @@ const RemoteMcp = lazy(() => import('@/pages/admin/RemoteMcp'))
 // Logs & Monitoring pages
 const LogsIndex = lazy(() => import('@/pages/LogsIndex'))
 const LiveLogs = lazy(() => import('@/pages/Logs'))
-const SecurityDashboard = lazy(() => import('@/pages/monitoring/SecurityDashboard'))
-const TrafficDashboard = lazy(() => import('@/pages/monitoring/TrafficDashboard'))
 const LatencyDashboard = lazy(() => import('@/pages/monitoring/LatencyDashboard'))
 const HealthMonitor = lazy(() => import('@/pages/HealthMonitor'))
 
@@ -224,8 +222,8 @@ function App() {
                 <Route path="/logs" element={<LogsIndex />} />
                 <Route path="/logs/live" element={<LiveLogs />} />
                 <Route path="/logs/sandbox" element={<Analyzer />} />
-                <Route path="/logs/security" element={<SecurityDashboard />} />
-                <Route path="/logs/traffic" element={<TrafficDashboard />} />
+                <Route path="/logs/security" element={<Navigate to="/logs/live" replace />} />
+                <Route path="/logs/traffic" element={<Navigate to="/logs/live" replace />} />
                 <Route path="/logs/latency" element={<LatencyDashboard />} />
                 <Route path="/health" element={<HealthMonitor />} />
                 {/* Phase 7: Settings & Action Center */}
