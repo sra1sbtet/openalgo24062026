@@ -11,124 +11,63 @@ import { showToast } from '@/utils/toast'
 interface TwoFactorStatus {
   totp_enabled: boolean
   totp_required_for_login: boolean
-  totp_required_for_mcp: boolean
-  totp_required_for_password_reset: boolean
   last_totp_verified_at: string | null
 }
-
-type PurposeKey =
-  | 'totp_required_for_login'
-  | 'totp_required_for_mcp'
-  | 'totp_required_for_password_reset'
-
-const PURPOSES: { key: PurposeKey; label: string; help: string }[] = [
-  {
-    key: 'totp_required_for_login',
-    label: 'Dashboard sign-in',
-    help: 'Require a 6-digit code after password on every login.',
-  },
-  {
-    key: 'totp_required_for_mcp',
-    label: 'Remote MCP authorization',
-    help: 'Require a fresh code at the OAuth consent screen when an MCP client requests order-placement scope.',
-  },
-  {
-    key: 'totp_required_for_password_reset',
-    label: 'Password reset',
-    help: 'Disable the email reset path; force the authenticator app for every password reset.',
-  },
-]
 
 export default function TwoFactorEnforcement() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<TwoFactorStatus | null>(null)
-  const [draft, setDraft] = useState<Omit<TwoFactorStatus, 'last_totp_verified_at'>>({
-    totp_enabled: false,
-    totp_required_for_login: false,
-    totp_required_for_mcp: false,
-    totp_required_for_password_reset: false,
-  })
+  const [enabled, setEnabled] = useState(false)
+  const [requiredForLogin, setRequiredForLogin] = useState(false)
   const [totpCode, setTotpCode] = useState('')
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: one-time 2FA status load on mount; fetchStatus has no reactive inputs
-  useEffect(() => {
-    fetchStatus()
-  }, [])
 
   const fetchStatus = async () => {
     setLoading(true)
     try {
-      const r = await webClient.get<TwoFactorStatus & { status?: string }>('/auth/2fa/status')
-      setStatus(r.data)
-      setDraft({
-        totp_enabled: r.data.totp_enabled,
-        totp_required_for_login: r.data.totp_required_for_login,
-        totp_required_for_mcp: r.data.totp_required_for_mcp,
-        totp_required_for_password_reset: r.data.totp_required_for_password_reset,
-      })
+      const response = await webClient.get<TwoFactorStatus>('/auth/2fa/status')
+      setStatus(response.data)
+      setEnabled(response.data.totp_enabled)
+      setRequiredForLogin(response.data.totp_required_for_login)
     } catch {
-      showToast.error('Failed to load 2FA settings', 'system')
+      showToast.error('Failed to load two-factor settings', 'system')
     } finally {
       setLoading(false)
     }
   }
 
-  const isDirty =
-    !!status &&
-    (draft.totp_enabled !== status.totp_enabled ||
-      draft.totp_required_for_login !== status.totp_required_for_login ||
-      draft.totp_required_for_mcp !== status.totp_required_for_mcp ||
-      draft.totp_required_for_password_reset !== status.totp_required_for_password_reset)
+  useEffect(() => {
+    fetchStatus()
+  }, [])
 
-  const allOn =
-    draft.totp_enabled &&
-    draft.totp_required_for_login &&
-    draft.totp_required_for_mcp &&
-    draft.totp_required_for_password_reset
+  const dirty =
+    status &&
+    (enabled !== status.totp_enabled || requiredForLogin !== status.totp_required_for_login)
 
-  const setMaster = (enabled: boolean) => {
-    setDraft((prev) =>
-      enabled
-        ? { ...prev, totp_enabled: true }
-        : {
-            totp_enabled: false,
-            totp_required_for_login: false,
-            totp_required_for_mcp: false,
-            totp_required_for_password_reset: false,
-          }
-    )
+  const setMaster = (value: boolean) => {
+    setEnabled(value)
+    if (!value) setRequiredForLogin(false)
   }
 
-  const setAll = (on: boolean) => {
-    setDraft({
-      totp_enabled: on,
-      totp_required_for_login: on,
-      totp_required_for_mcp: on,
-      totp_required_for_password_reset: on,
-    })
-  }
-
-  const setPurpose = (key: PurposeKey, value: boolean) => {
-    setDraft((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const handleSave = async () => {
-    if (!totpCode || totpCode.length !== 6) {
-      showToast.error('Enter your 6-digit authenticator code to confirm.', 'system')
+  const save = async () => {
+    if (totpCode.length !== 6) {
+      showToast.error('Enter the current 6-digit authenticator code.', 'system')
       return
     }
     setSaving(true)
     try {
-      const body = { ...draft, totp_code: totpCode }
-      await webClient.post('/auth/2fa/configure', body)
-      showToast.success('2FA settings updated.', 'system')
+      await webClient.post('/auth/2fa/configure', {
+        totp_enabled: enabled,
+        totp_required_for_login: requiredForLogin,
+        totp_code: totpCode,
+      })
+      showToast.success('Two-factor settings updated', 'system')
       setTotpCode('')
       await fetchStatus()
-    } catch (err: unknown) {
+    } catch (error: unknown) {
       const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Failed to update 2FA settings.'
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Failed to update two-factor settings.'
       showToast.error(message, 'system')
     } finally {
       setSaving(false)
@@ -137,101 +76,74 @@ export default function TwoFactorEnforcement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-6">
+      <div className="flex items-center justify-center py-8">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   return (
-    <Card>
+    <Card className="rounded-lg">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5" />
-          2FA Enforcement
+          Two-factor sign-in
         </CardTitle>
-        <CardDescription>
-          Choose where 2FA is required. Default is off — when on, pick which purposes.
-        </CardDescription>
+        <CardDescription>Require an authenticator code after the account password.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Master switch */}
-        <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
-          <div className="flex-1">
-            <Label className="font-semibold">Enable 2FA</Label>
-            <p className="text-sm text-muted-foreground mt-1">
-              Master switch. When off, every per-purpose toggle below is ignored and the install
-              behaves as it did before this feature.
+        <div className="flex items-start justify-between gap-4 border p-4">
+          <div>
+            <Label className="font-semibold">Enable two-factor authentication</Label>
+            <p className="mt-1 text-sm text-muted-foreground">
+              The QR code above must be added to your authenticator app first.
             </p>
           </div>
-          <Switch checked={draft.totp_enabled} onCheckedChange={setMaster} />
+          <Switch checked={enabled} onCheckedChange={setMaster} />
         </div>
 
-        {/* Per-purpose toggles */}
-        {draft.totp_enabled ? (
-          <div className="space-y-3 rounded-lg border p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Apply 2FA to:</span>
-              <button
-                type="button"
-                className="text-xs text-primary hover:underline"
-                onClick={() => setAll(!allOn)}
-              >
-                {allOn ? 'Clear all' : 'Select all'}
-              </button>
+        {enabled && (
+          <div className="flex items-start justify-between gap-4 border p-4">
+            <div>
+              <Label className="font-medium">Protect dashboard sign-in</Label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Ask for a 6-digit code whenever this account signs in.
+              </p>
             </div>
-            {PURPOSES.map((p) => (
-              <div key={p.key} className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <Label className="font-medium">{p.label}</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">{p.help}</p>
-                </div>
-                <Switch
-                  checked={Boolean(draft[p.key])}
-                  onCheckedChange={(v) => setPurpose(p.key, v)}
-                />
-              </div>
-            ))}
+            <Switch checked={requiredForLogin} onCheckedChange={setRequiredForLogin} />
           </div>
-        ) : null}
+        )}
 
-        {/* TOTP confirmation */}
-        {isDirty ? (
-          <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:bg-amber-950/30">
-            <Label htmlFor="confirm-totp" className="text-sm font-semibold">
-              Confirm with TOTP code
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Enter the current 6-digit code from your authenticator app to apply this change.
-              Required whether you are turning 2FA on or off.
-            </p>
+        {dirty && (
+          <div className="space-y-3 border border-amber-300 bg-amber-50 p-4 dark:bg-amber-950/30">
+            <div className="space-y-1">
+              <Label htmlFor="confirm-totp">Confirm with authenticator code</Label>
+              <p className="text-xs text-muted-foreground">
+                Enter the current code to save this security change.
+              </p>
+            </div>
             <Input
               id="confirm-totp"
+              value={totpCode}
+              onChange={(event) =>
+                setTotpCode(event.target.value.replace(/\D/g, '').slice(0, 6))
+              }
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
               pattern="[0-9]{6}"
-              placeholder="123456"
-              value={totpCode}
-              onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="font-mono text-center tracking-widest max-w-xs"
+              maxLength={6}
+              className="max-w-xs text-center font-mono"
             />
-            <div className="flex gap-2 pt-1">
-              <Button onClick={handleSave} disabled={saving || totpCode.length !== 6}>
-                {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
-                Save 2FA settings
+            <div className="flex gap-2">
+              <Button onClick={save} disabled={saving || totpCode.length !== 6}>
+                {saving && <Loader2 className="animate-spin" />}
+                Save
               </Button>
               <Button
                 variant="outline"
                 onClick={() => {
-                  if (status) {
-                    setDraft({
-                      totp_enabled: status.totp_enabled,
-                      totp_required_for_login: status.totp_required_for_login,
-                      totp_required_for_mcp: status.totp_required_for_mcp,
-                      totp_required_for_password_reset: status.totp_required_for_password_reset,
-                    })
-                  }
+                  setEnabled(Boolean(status?.totp_enabled))
+                  setRequiredForLogin(Boolean(status?.totp_required_for_login))
                   setTotpCode('')
                 }}
                 disabled={saving}
@@ -240,13 +152,13 @@ export default function TwoFactorEnforcement() {
               </Button>
             </div>
           </div>
-        ) : null}
+        )}
 
-        {status?.last_totp_verified_at ? (
+        {status?.last_totp_verified_at && (
           <p className="text-xs text-muted-foreground">
-            Last TOTP verification: {new Date(status.last_totp_verified_at).toLocaleString()}
+            Last verified: {new Date(status.last_totp_verified_at).toLocaleString()}
           </p>
-        ) : null}
+        )}
       </CardContent>
     </Card>
   )

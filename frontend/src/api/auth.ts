@@ -94,10 +94,15 @@ export const authApi = {
   /**
    * Change password
    */
-  changePassword: async (currentPassword: string, newPassword: string): Promise<LoginResponse> => {
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<LoginResponse> => {
     const formData = new FormData()
     formData.append('current_password', currentPassword)
     formData.append('new_password', newPassword)
+    formData.append('confirm_password', confirmPassword)
     const response = await authClient.post<LoginResponse>('/auth/change-password', formData)
     return response.data
   },

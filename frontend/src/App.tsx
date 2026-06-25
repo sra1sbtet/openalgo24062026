@@ -13,6 +13,7 @@ import { useBrokerStore } from '@/stores/brokerStore'
 const Home = lazy(() => import('@/pages/Home'))
 const Faq = lazy(() => import('@/pages/Faq'))
 const Setup = lazy(() => import('@/pages/Setup'))
+const Login = lazy(() => import('@/pages/Login'))
 const Download = lazy(() => import('@/pages/Download'))
 const ServerError = lazy(() => import('@/pages/ServerError'))
 const RateLimited = lazy(() => import('@/pages/RateLimited'))
@@ -32,6 +33,7 @@ const Token = lazy(() => import('@/pages/Token'))
 const ApiKey = lazy(() => import('@/pages/ApiKey'))
 const MasterContract = lazy(() => import('@/pages/MasterContract'))
 const ActionCenter = lazy(() => import('@/pages/ActionCenter'))
+const Profile = lazy(() => import('@/pages/Profile'))
 
 // Platform pages
 const Platforms = lazy(() => import('@/pages/Platforms'))
@@ -130,7 +132,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/faq" element={<Faq />} />
               <Route path="/setup" element={<Setup />} />
-              <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<Navigate to="/setup" replace />} />
               <Route path="/download" element={<Download />} />
               <Route path="/error" element={<ServerError />} />
@@ -227,7 +229,7 @@ function App() {
                 <Route path="/logs/latency" element={<LatencyDashboard />} />
                 <Route path="/health" element={<HealthMonitor />} />
                 {/* Phase 7: Settings & Action Center */}
-                <Route path="/profile" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/master-contract" element={<MasterContract />} />
                 <Route path="/action-center" element={<ActionCenter />} />
               </Route>

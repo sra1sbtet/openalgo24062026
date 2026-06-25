@@ -28,6 +28,7 @@ from flask_wtf.csrf import CSRFProtect  # Import CSRF protection
 
 from blueprints.analyzer import analyzer_bp  # Import the analyzer blueprint
 from blueprints.apikey import api_key_bp
+from blueprints.auth import auth_bp
 from blueprints.brlogin import brlogin_bp
 from blueprints.broker_credentials import (
     broker_credentials_bp,  # Import the broker credentials blueprint
@@ -83,6 +84,7 @@ from database.scalping_db import init_db as ensure_scalping_tables_exists
 from database.settings_db import init_db as ensure_settings_tables_exists
 from database.strategy_db import init_db as ensure_strategy_tables_exists
 from database.symbol import init_db as ensure_master_contract_tables_exists
+from database.user_db import init_db as ensure_user_tables_exists
 from extensions import socketio  # Import SocketIO
 from limiter import limiter  # Import the Limiter instance
 from restx_api import api, api_v1_bp
@@ -224,6 +226,7 @@ def create_app():
     csrf.exempt(api_v1_bp)
 
     # Register other blueprints
+    app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(orders_bp)
     app.register_blueprint(api_key_bp)
@@ -556,6 +559,7 @@ def setup_environment(app):
             )
 
             db_init_functions = [
+                ("User DB", ensure_user_tables_exists),
                 ("Auth DB", ensure_auth_tables_exists),
                 ("Master Contract DB", ensure_master_contract_tables_exists),
                 ("API Log DB", ensure_api_log_tables_exists),
@@ -819,4 +823,14 @@ if __name__ == "__main__":
             f"{C}{BL}{H*(_W-2)}{BR}{R}", "",
         ]), flush=True)
 
-    socketio.run(app, host=host_ip, port=port, debug=debug, reloader_options=reloader_options)
+    allow_unsafe_werkzeug = host_ip in ("127.0.0.1", "localhost", "::1") or os.getenv(
+        "FLASK_ENV", ""
+    ).lower() == "development"
+    socketio.run(
+        app,
+        host=host_ip,
+        port=port,
+        debug=debug,
+        reloader_options=reloader_options,
+        allow_unsafe_werkzeug=allow_unsafe_werkzeug,
+    )

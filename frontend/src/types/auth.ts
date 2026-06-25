@@ -10,8 +10,10 @@ export interface LoginCredentials {
 }
 
 export interface LoginResponse {
-  status: 'success' | 'error'
+  status: 'success' | 'error' | 'totp_required'
   message?: string
+  broker?: string
+  redirect?: string
 }
 
 export interface BrokerInfo {
