@@ -50,6 +50,7 @@ def _complete_local_login(username):
     session.clear()
     session["authenticated"] = True
     session["user"] = username
+    session["user_session_key"] = username
     return jsonify({"status": "success", "message": "Login successful"}), 200
 
 

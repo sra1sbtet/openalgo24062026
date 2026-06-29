@@ -55,8 +55,8 @@ export function AuthSync({ children }: AuthSyncProps) {
             setUser({
               username: data.user,
               broker: null,
-              isLoggedIn: false,
-              loginTime: null,
+              isLoggedIn: true,
+              loginTime: new Date().toISOString(),
             })
             clearCapabilities()
           } else {
